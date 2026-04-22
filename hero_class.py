@@ -1,9 +1,22 @@
 import arcade
 import animate
+import explodableBlock
 from constants import *
 
 
 class Hero(animate.Animate):
+    def _try_consume_one_time_block(self, next_direction):
+        pending = self.window.pending_one_time_block
+        if pending is None:
+            return
+        hit_direction = getattr(self.window, "pending_one_time_hit_direction", None)
+        # One-time block disappears after changing direction away from hit direction.
+        # If hit direction is unexpectedly missing, consume to avoid stuck pending state.
+        if hit_direction is None or next_direction != hit_direction:
+            pending.kill()
+            self.window.pending_one_time_block = None
+            self.window.pending_one_time_hit_direction = None
+
     def change_scale(self, scale):
         self.scale = scale * 0.5
 
@@ -20,9 +33,10 @@ class Hero(animate.Animate):
         for i in range(8):
             self.walk_down_frames.append(arcade.load_texture(f"resources/Bomberman/Front/Bman_F_f0{i}.png"))
             self.walk_up_frames.append(arcade.load_texture(f"resources/Bomberman/Back/Bman_B_f0{i}.png"))
-            self.walk_right_frames.append(arcade.load_texture(f"resources/Bomberman/Side/Bman_S_f0{i}.png"))
-            self.walk_left_frames.append(
-                arcade.load_texture(f"resources/Bomberman/Side/Bman_S_f0{i}.png", flipped_horizontally=True))
+            side_texture = arcade.load_texture(f"resources/Bomberman/Side/Bman_S_f0{i}.png")
+            self.walk_right_frames.append(side_texture)
+            # Arcade 3 removed flipped_horizontally in load_texture, reuse side texture for left walk.
+            self.walk_left_frames.append(side_texture)
             self.stand_down_frames.append(arcade.load_texture(f"resources/Bomberman/Front/Bman_F_f0{0}.png"))
         self.direction = 4
         self.motion = 0
@@ -71,6 +85,7 @@ class Hero(animate.Animate):
 
     def to_up(self):
         if not self.motion:
+            self._try_consume_one_time_block(3)
             self.motion = 1
             self.direction = 3
             self.change_y = self.speed
@@ -80,6 +95,7 @@ class Hero(animate.Animate):
 
     def to_down(self):
         if not self.motion:
+            self._try_consume_one_time_block(4)
             self.motion = 1
             self.direction = 4
             self.change_y = -self.speed
@@ -89,6 +105,7 @@ class Hero(animate.Animate):
 
     def to_left(self):
         if not self.motion:
+            self._try_consume_one_time_block(1)
             self.motion = 1
             self.direction = 1
             self.change_x = -self.speed
@@ -98,6 +115,7 @@ class Hero(animate.Animate):
 
     def to_right(self):
         if not self.motion:
+            self._try_consume_one_time_block(2)
             self.motion = 1
             self.direction = 2
             self.change_x = self.speed
@@ -128,7 +146,12 @@ class Hero(animate.Animate):
                     self.to_stop()
                     self.center_y = justify_y(self.center_y, self.window.cell_height, self.window.row_count)
                     self.center_x = justify_x(self.center_x, self.window.cell_width, self.window.column_count)
+                    if getattr(block, "one_time", False):
+                        self.window.pending_one_time_block = block
+                        self.window.pending_one_time_hit_direction = self.direction
                 else:
                     block.kill()
                     self.window.current_score += 1
+                    if isinstance(block, explodableBlock.ExplodableBlock):
+                        self.window.on_meteorite_destroyed()
                     arcade.play_sound(self.window.coinSound, volume=0.1)

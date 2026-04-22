@@ -7,6 +7,11 @@ ROW_COUNT = 11
 COLUMN_COUNT = 11
 PLAYER_SPEED = 20
 
+LEVEL_TIME_SECONDS = 60.0
+MAX_HEARTS = 10
+METEORITES_PER_HEART = 50
+START_HEARTS = 3
+
 
 def justify_x(position_x, cell_width, column_count):
     for x in range(column_count):

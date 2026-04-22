@@ -1,10 +1,10 @@
 admin:200
+qwerty:194
 player1:80
 player2:70
+Player:70
 player3:65
+Player:55
 player4:35
+54321:34
 player5:30
-player6:25
-player7:13
-player8:11
-player9:7
